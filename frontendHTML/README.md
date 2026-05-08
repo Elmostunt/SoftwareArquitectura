@@ -117,10 +117,12 @@ git clone <URL_DEL_REPOSITORIO_DEL_PROFESOR>
 > Descarga el repositorio completo a la VM. La URL te la entrega el profesor.
 
 ```bash
-sudo cp <nombre-repo>/frontendHTML/index.html /var/www/html/index.html
+sudo cp /SoftwareArquitectura/frontendHTML/index.html /var/www/html/index.html
+sudo cp Softwaindex.html /var/www/html/
 ```
 > Copia el archivo `index.html` al directorio raíz de Apache.
 > `/var/www/html/` es la carpeta que Apache sirve por defecto.
+
 > El archivo reemplaza la página de bienvenida de Apache.
 
 **Opción B — copiar desde tu máquina local (con gcloud CLI instalado):**
