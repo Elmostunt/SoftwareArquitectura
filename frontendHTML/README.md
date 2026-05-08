@@ -118,7 +118,6 @@ git clone <URL_DEL_REPOSITORIO_DEL_PROFESOR>
 
 ```bash
 sudo cp /SoftwareArquitectura/frontendHTML/index.html /var/www/html/index.html
-sudo cp Softwaindex.html /var/www/html/
 ```
 > Copia el archivo `index.html` al directorio raíz de Apache.
 > `/var/www/html/` es la carpeta que Apache sirve por defecto.
