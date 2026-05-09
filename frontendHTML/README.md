@@ -124,20 +124,6 @@ sudo cp /SoftwareArquitectura/frontendHTML/index.html /var/www/html/index.html
 
 > El archivo reemplaza la página de bienvenida de Apache.
 
-**Opción B — copiar desde tu máquina local (con gcloud CLI instalado):**
-```bash
-gcloud compute scp ./frontendHTML/index.html ovnis-html-tunombre:/tmp/index.html --zone=us-central1-a
-```
-> **Ejecutar en tu máquina local, NO dentro de la VM.**
-> `scp` copia el archivo desde tu computador a la carpeta `/tmp/` de la VM de forma segura.
-> No se copia directo a `/var/www/html/` porque esa carpeta requiere permisos de superusuario.
-
-Luego dentro de la VM:
-```bash
-sudo mv /tmp/index.html /var/www/html/index.html
-```
-> Mueve el archivo desde `/tmp/` al directorio de Apache con los permisos correctos.
-
 ---
 
 ## Paso 5 — Ajustar permisos
