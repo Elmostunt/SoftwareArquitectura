@@ -66,8 +66,7 @@ gcloud artifacts repositories create ovnis-repo \
 
 ---
 
-## Paso 4 — Construir y subir la imagen Docker
-
+  
 Este proyecto ya incluye el `Dockerfile` y `nginx.conf` necesarios.
 Usamos **Cloud Build** para construir la imagen directamente en la nube, sin necesitar Docker instalado localmente.
 
