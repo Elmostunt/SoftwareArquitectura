@@ -7,8 +7,13 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install
 
-# Copia el resto del código fuente y compila
+# Copia el resto del código fuente
 COPY . .
+
+# Variable de entorno para la URL del Load Balancer (se pasa como build arg)
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 # ── Etapa 2: Servir los archivos estáticos con Nginx ─────────

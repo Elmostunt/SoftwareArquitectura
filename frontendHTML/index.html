@@ -41,6 +41,7 @@
     }
     .btn:hover  { opacity: .87; }
     .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
     .btn-primary   { background: #1a4731; color: #fff; }
     .btn-secondary { background: #e2e8f0; color: #4a5568; }
     .btn-edit      { background: #2b6cb0; color: #fff; }
@@ -93,6 +94,46 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
+    /* ── Notificaciones ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      z-index: 500;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
+      pointer-events: none;
+    }
+    .toast.show    { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #276749; }
+    .toast.error   { background: #9b2c2c; }
+
+    /* ── Loading ── */
+    .loading-row td {
+      text-align: center;
+      padding: 48px;
+      color: #718096;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #cbd5e0;
+      border-top-color: #1a4731;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── Modal ── */
     .modal-overlay {
@@ -183,12 +224,13 @@
 
 <header class="header">
   <h1>🛸 Registro de Avistamiento de OVNIs</h1>
-  <p>Versión HTML pura — datos en memoria del navegador</p>
+  <p>Frontend en Google Cloud — API en AWS (Load Balancer)</p>
 </header>
 
 <main class="container">
   <div class="toolbar">
-    <button class="btn btn-primary" onclick="abrirCrear()">+ Nuevo avistamiento</button>
+    <button class="btn btn-primary" id="btn-nuevo" onclick="abrirCrear()">+ Nuevo avistamiento</button>
+    <button class="btn btn-secondary" onclick="cargarAvistamientos()">Recargar</button>
   </div>
   <div class="table-wrapper" id="tabla-container"></div>
 </main>
@@ -248,23 +290,60 @@
   </div>
 </div>
 
-<script>
-  // ── Datos en memoria ─────────────────────────────────────────
-  var avistamientos = [
-    { id: 1, fecha: '2024-03-15', hora: '22:15', ubicacion: 'Cerro El Plomo, Santiago',          cantidad: 1, forma: 'Disco',          observaciones: 'Objeto luminoso que se desplazaba en silencio a baja altura', registrado_por: 'Juan Pérez'     },
-    { id: 2, fecha: '2024-03-16', hora: '03:40', ubicacion: 'Desierto de Atacama, sector norte', cantidad: 3, forma: 'Triangular',      observaciones: 'Tres luces en formación triangular perfecta, inmóviles por 10 min', registrado_por: 'María González' },
-    { id: 3, fecha: '2024-03-17', hora: '20:05', ubicacion: 'Caleta Tortel, Aysén',              cantidad: 1, forma: 'Esfera',          observaciones: 'Esfera naranja que descendió hacia el mar y desapareció',      registrado_por: 'Carlos Silva'   },
-    { id: 4, fecha: '2024-03-18', hora: '01:30', ubicacion: 'Cajón del Maipo',                   cantidad: 2, forma: 'Cigarro',         observaciones: 'Dos objetos alargados que aceleraron hacia el norte',          registrado_por: 'Ana Martínez'   },
-    { id: 5, fecha: '2024-03-19', hora: '23:55', ubicacion: 'Carretera Austral km 340',          cantidad: 1, forma: 'Circular',        observaciones: 'Luz intensa que iluminó el camino por varios segundos',        registrado_por: 'Roberto Díaz'   },
-  ];
-  var nextId    = 6;
-  var editandoId = null;  // null = modo crear, número = modo editar
+<!-- Toast de notificaciones -->
+<div class="toast" id="toast"></div>
 
-  // ── Renderizado de la tabla ──────────────────────────────────
-  function renderTabla() {
+<script>
+  // ── Configuración — reemplazar con el DNS real del Load Balancer de AWS ──────
+  var API_BASE_URL = 'http://LOAD_BALANCER_DNS_AQUI';
+
+  var editandoId = null;
+
+  // ── Toast ────────────────────────────────────────────────────────────────────
+  function mostrarToast(mensaje, tipo) {
+    var t = document.getElementById('toast');
+    t.textContent = mensaje;
+    t.className = 'toast ' + (tipo || 'success') + ' show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function() { t.className = 'toast'; }, 3000);
+  }
+
+  // ── API helpers ──────────────────────────────────────────────────────────────
+  async function apiFetch(path, options) {
+    var response = await fetch(API_BASE_URL + path, Object.assign({
+      headers: { 'Content-Type': 'application/json' }
+    }, options || {}));
+
+    if (!response.ok) {
+      var err;
+      try { err = (await response.json()).detail || response.statusText; }
+      catch (e) { err = response.statusText; }
+      throw new Error(err);
+    }
+
+    if (response.status === 204) return null;
+    return response.json();
+  }
+
+  // ── Renderizado ──────────────────────────────────────────────────────────────
+  function mostrarCargando() {
+    document.getElementById('tabla-container').innerHTML =
+      '<table>' +
+        '<thead><tr>' +
+          '<th>#</th><th>Fecha</th><th>Hora</th><th>Ubicación</th>' +
+          '<th>Cantidad</th><th>Forma</th><th>Registrado por</th>' +
+          '<th>Observaciones</th><th>Acciones</th>' +
+        '</tr></thead>' +
+        '<tbody><tr class="loading-row"><td colspan="9">' +
+          '<span class="spinner"></span>Cargando avistamientos...' +
+        '</td></tr></tbody>' +
+      '</table>';
+  }
+
+  function renderTabla(avistamientos) {
     var contenedor = document.getElementById('tabla-container');
 
-    if (avistamientos.length === 0) {
+    if (!avistamientos || avistamientos.length === 0) {
       contenedor.innerHTML = '<p class="empty-msg">No hay avistamientos registrados. Crea el primero.</p>';
       return;
     }
@@ -278,7 +357,7 @@
         '<td><span class="badge">' + av.cantidad + '</span></td>' +
         '<td>' + (av.forma || '—') + '</td>' +
         '<td>' + (av.registrado_por || '—') + '</td>' +
-        '<td class="obs-cell">' + (av.observaciones || '—') + '</td>' +
+        '<td class="obs-cell" title="' + (av.observaciones || '') + '">' + (av.observaciones || '—') + '</td>' +
         '<td>' +
           '<button class="btn btn-sm btn-edit"   onclick="abrirEditar(' + av.id + ')">Editar</button>' +
           '<button class="btn btn-sm btn-delete" onclick="eliminar(' + av.id + ')">Eliminar</button>' +
@@ -297,7 +376,20 @@
       '</table>';
   }
 
-  // ── Abrir modal en modo CREAR ────────────────────────────────
+  // ── Cargar lista desde la API ─────────────────────────────────────────────
+  async function cargarAvistamientos() {
+    mostrarCargando();
+    try {
+      var datos = await apiFetch('/avistamientos');
+      renderTabla(datos);
+    } catch (err) {
+      document.getElementById('tabla-container').innerHTML =
+        '<p class="empty-msg">Error al conectar con la API: ' + err.message + '</p>';
+      mostrarToast('Error: ' + err.message, 'error');
+    }
+  }
+
+  // ── Abrir modal en modo CREAR ─────────────────────────────────────────────
   function abrirCrear() {
     editandoId = null;
     document.getElementById('modal-titulo').textContent = 'Nuevo Avistamiento de OVNI';
@@ -307,27 +399,30 @@
     document.getElementById('modal').classList.add('open');
   }
 
-  // ── Abrir modal en modo EDITAR ───────────────────────────────
-  function abrirEditar(id) {
-    var av = avistamientos.find(function(a) { return a.id === id; });
-    if (!av) return;
+  // ── Abrir modal en modo EDITAR ────────────────────────────────────────────
+  async function abrirEditar(id) {
+    try {
+      var av = await apiFetch('/avistamientos/' + id);
 
-    editandoId = id;
-    document.getElementById('modal-titulo').textContent = 'Editar Avistamiento';
-    document.getElementById('btn-guardar').textContent  = 'Guardar cambios';
+      editandoId = id;
+      document.getElementById('modal-titulo').textContent = 'Editar Avistamiento';
+      document.getElementById('btn-guardar').textContent  = 'Guardar cambios';
 
-    document.getElementById('f-fecha').value          = av.fecha          || '';
-    document.getElementById('f-hora').value           = av.hora           || '';
-    document.getElementById('f-ubicacion').value      = av.ubicacion      || '';
-    document.getElementById('f-cantidad').value       = av.cantidad       || 1;
-    document.getElementById('f-forma').value          = av.forma          || 'No identificada';
-    document.getElementById('f-registrado_por').value = av.registrado_por || '';
-    document.getElementById('f-observaciones').value  = av.observaciones  || '';
+      document.getElementById('f-fecha').value          = av.fecha          || '';
+      document.getElementById('f-hora').value           = av.hora           || '';
+      document.getElementById('f-ubicacion').value      = av.ubicacion      || '';
+      document.getElementById('f-cantidad').value       = av.cantidad       || 1;
+      document.getElementById('f-forma').value          = av.forma          || 'No identificada';
+      document.getElementById('f-registrado_por').value = av.registrado_por || '';
+      document.getElementById('f-observaciones').value  = av.observaciones  || '';
 
-    document.getElementById('modal').classList.add('open');
+      document.getElementById('modal').classList.add('open');
+    } catch (err) {
+      mostrarToast('No se pudo cargar el registro: ' + err.message, 'error');
+    }
   }
 
-  // ── Cerrar modal ─────────────────────────────────────────────
+  // ── Cerrar modal ──────────────────────────────────────────────────────────
   function cerrarModal() {
     document.getElementById('modal').classList.remove('open');
     editandoId = null;
@@ -337,8 +432,8 @@
     if (event.target === document.getElementById('modal')) cerrarModal();
   }
 
-  // ── Guardar (crear o editar) ─────────────────────────────────
-  function guardar(event) {
+  // ── Guardar (crear o editar) ──────────────────────────────────────────────
+  async function guardar(event) {
     event.preventDefault();
 
     var datos = {
@@ -347,35 +442,53 @@
       ubicacion:      document.getElementById('f-ubicacion').value,
       cantidad:       parseInt(document.getElementById('f-cantidad').value, 10),
       forma:          document.getElementById('f-forma').value,
-      registrado_por: document.getElementById('f-registrado_por').value,
-      observaciones:  document.getElementById('f-observaciones').value,
+      registrado_por: document.getElementById('f-registrado_por').value || null,
+      observaciones:  document.getElementById('f-observaciones').value  || null,
     };
 
-    if (editandoId !== null) {
-      // Editar: reemplazar el elemento en la lista
-      avistamientos = avistamientos.map(function(av) {
-        return av.id === editandoId ? Object.assign({ id: editandoId }, datos) : av;
-      });
-    } else {
-      // Crear: agregar al final de la lista
-      datos.id = nextId;
-      nextId++;
-      avistamientos.push(datos);
+    var btnGuardar = document.getElementById('btn-guardar');
+    btnGuardar.disabled = true;
+    btnGuardar.textContent = 'Guardando...';
+
+    try {
+      if (editandoId !== null) {
+        await apiFetch('/avistamientos/' + editandoId, {
+          method: 'PUT',
+          body: JSON.stringify(datos)
+        });
+        mostrarToast('Avistamiento actualizado correctamente');
+      } else {
+        await apiFetch('/avistamientos', {
+          method: 'POST',
+          body: JSON.stringify(datos)
+        });
+        mostrarToast('Avistamiento registrado correctamente');
+      }
+
+      cerrarModal();
+      await cargarAvistamientos();
+    } catch (err) {
+      mostrarToast('Error al guardar: ' + err.message, 'error');
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = editandoId !== null ? 'Guardar cambios' : 'Registrar avistamiento';
     }
-
-    cerrarModal();
-    renderTabla();
   }
 
-  // ── Eliminar ─────────────────────────────────────────────────
-  function eliminar(id) {
+  // ── Eliminar ──────────────────────────────────────────────────────────────
+  async function eliminar(id) {
     if (!confirm('¿Seguro que deseas eliminar este avistamiento?')) return;
-    avistamientos = avistamientos.filter(function(av) { return av.id !== id; });
-    renderTabla();
+
+    try {
+      await apiFetch('/avistamientos/' + id, { method: 'DELETE' });
+      mostrarToast('Avistamiento eliminado');
+      await cargarAvistamientos();
+    } catch (err) {
+      mostrarToast('Error al eliminar: ' + err.message, 'error');
+    }
   }
 
-  // ── Inicializar ──────────────────────────────────────────────
-  renderTabla();
+  // ── Inicializar ───────────────────────────────────────────────────────────
+  cargarAvistamientos();
 </script>
 
 </body>

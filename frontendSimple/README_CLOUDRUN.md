@@ -66,88 +66,103 @@ gcloud artifacts repositories create ovnis-repo \
 
 ---
 
-  
-Este proyecto ya incluye el `Dockerfile` y `nginx.conf` necesarios.
-Usamos **Cloud Build** para construir la imagen directamente en la nube, sin necesitar Docker instalado localmente.
+## Paso 4 — Configurar la URL del backend ⚠️ PASO CRÍTICO
 
-Primero construye el ID del proyecto en una variable para no repetirlo:
-```bash
-export PROJECT_ID=$(gcloud config get-value project)
-```
-> Guarda el ID del proyecto en la variable `PROJECT_ID` para usarla en los comandos siguientes.
-> `$(...)` ejecuta el comando interno y pone su resultado en la variable.
+La URL del Load Balancer de AWS debe pasarse en el momento de construir la imagen.
+Usamos un **build argument** de Docker para que Vite la incruste en el JavaScript.
 
+Guardar el DNS del ALB en una variable:
 ```bash
-gcloud builds submit \
-  --tag us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-simple \
-  .
+export ALB_DNS="http://ovnis-alb-1234567890.us-east-1.elb.amazonaws.com"
 ```
-> Sube el código fuente de la carpeta actual (`.`) a Cloud Build y construye la imagen Docker ahí.
-> `--tag` es el nombre completo de la imagen en Artifact Registry. El formato es:
-> `REGION-docker.pkg.dev/PROYECTO/REPOSITORIO/NOMBRE_IMAGEN`
-> Cloud Build lee el `Dockerfile` del proyecto, ejecuta las dos etapas (build con Node, serve con Nginx)
-> y guarda la imagen terminada en Artifact Registry.
-> Este proceso tarda entre 2 y 4 minutos.
+> Reemplaza el valor con el DNS real de tu Load Balancer.
+> Lo encuentras en: **AWS Console → EC2 → Load Balancers → ovnis-alb → DNS name**
 
 ---
 
-## Paso 5 — Desplegar en Cloud Run
+## Paso 5 — Construir y subir la imagen Docker
+
+Este proyecto ya incluye el `Dockerfile` y `nginx.conf` necesarios.
+Usamos **Cloud Build** para construir la imagen directamente en la nube, sin necesitar Docker instalado localmente.
+
+Primero guarda el ID del proyecto:
+```bash
+export PROJECT_ID=$(gcloud config get-value project)
+```
 
 ```bash
-gcloud run deploy ovnis-simple \
-  --image us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-simple \
+gcloud builds submit \
+  --tag us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend \
+  --substitutions=_VITE_API_URL="$ALB_DNS" \
+  .
+```
+> `--substitutions=_VITE_API_URL` pasa la URL del ALB al proceso de build dentro de Cloud Build.
+> El `Dockerfile` usa `ARG VITE_API_URL` para que Vite la incruste en el JavaScript durante `npm run build`.
+> Este proceso tarda entre 2 y 4 minutos.
+
+> **Alternativa con Docker local** (si tienes Docker instalado en tu máquina):
+> ```bash
+> docker build --build-arg VITE_API_URL="$ALB_DNS" -t ovnis-frontend .
+> ```
+
+---
+
+## Paso 6 — Desplegar en Cloud Run
+
+```bash
+gcloud run deploy ovnis-frontend \
+  --image us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated
 ```
 > Crea el servicio en Cloud Run a partir de la imagen que subiste.
-> - `ovnis-simple` — nombre del servicio en Cloud Run.
+> - `ovnis-frontend` — nombre del servicio en Cloud Run.
 > - `--image` — ruta completa a la imagen en Artifact Registry (la misma del paso anterior).
 > - `--platform managed` — Cloud Run administrado por Google (sin Kubernetes propio).
 > - `--region us-central1` — región donde corre el servicio.
 > - `--allow-unauthenticated` — hace el servicio **público**: cualquier persona con la URL puede acceder sin login.
 >
 > Al terminar, el comando imprime la URL pública del servicio. Ejemplo:
-> `Service URL: https://ovnis-simple-xxxxxxxxxx-uc.a.run.app`
+> `Service URL: https://ovnis-frontend-xxxxxxxxxx-uc.a.run.app`
 
 ---
 
-## Paso 6 — Verificar
+## Paso 7 — Verificar
 
 Abrir la URL que mostró el comando anterior en el navegador:
 ```
-https://ovnis-simple-xxxxxxxxxx-uc.a.run.app
+https://ovnis-frontend-xxxxxxxxxx-uc.a.run.app
 ```
 > La URL cambia en cada proyecto. Cópiala directamente de la salida del comando anterior.
-> La aplicación debe mostrar la tabla de avistamientos de OVNIs con HTTPS activo.
+> La aplicación debe mostrar la tabla de avistamientos de OVNIs cargados desde AWS, con HTTPS activo.
 
 Para consultar la URL en cualquier momento:
 ```bash
-gcloud run services describe ovnis-simple \
+gcloud run services describe ovnis-frontend \
   --region us-central1 \
   --format='value(status.url)'
 ```
-> Muestra solo la URL del servicio sin información extra.
 
 ---
 
-## Paso 7 — Actualizar el despliegue (tras cambios en el código)
+## Paso 8 — Actualizar el despliegue (tras cambios en el código)
 
 Si modificas algo en el código fuente, debes reconstruir la imagen y redesplegar:
 
 ```bash
 gcloud builds submit \
-  --tag us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-simple \
+  --tag us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend \
+  --substitutions=_VITE_API_URL="$ALB_DNS" \
   .
 ```
-> Construye una nueva versión de la imagen con los cambios.
 
 ```bash
-gcloud run deploy ovnis-simple \
-  --image us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-simple \
+gcloud run deploy ovnis-frontend \
+  --image us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend \
   --region us-central1
 ```
-> Despliega la nueva imagen. Cloud Run hace el cambio sin tiempo de inactividad (zero-downtime).
+> Cloud Run hace el cambio sin tiempo de inactividad (zero-downtime).
 
 ---
 
@@ -179,23 +194,23 @@ gcloud run deploy ovnis-simple \
 ## Comandos útiles
 
 ```bash
-gcloud run services list --region us-central1
+gcloud run services list --region us-central1 --filter="metadata.name:ovnis-frontend"
 ```
 > Lista todos los servicios de Cloud Run en la región.
 
 ```bash
-gcloud run services describe ovnis-simple --region us-central1
+gcloud run services describe ovnis-frontend --region us-central1
 ```
 > Muestra detalles completos del servicio: URL, imagen, configuración y estado.
 
 ```bash
-gcloud run revisions list --service ovnis-simple --region us-central1
+gcloud run revisions list --service ovnis-frontend --region us-central1
 ```
 > Lista todas las versiones desplegadas del servicio.
 > Cloud Run guarda el historial de revisiones, lo que permite hacer rollback si algo falla.
 
 ```bash
-gcloud run services delete ovnis-simple --region us-central1
+gcloud run services delete ovnis-frontend --region us-central1
 ```
 > Elimina el servicio de Cloud Run completamente.
 > Útil para no generar costos cuando el laboratorio termina.

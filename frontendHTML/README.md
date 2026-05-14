@@ -117,12 +117,25 @@ git clone <URL_DEL_REPOSITORIO_DEL_PROFESOR>
 > Descarga el repositorio completo a la VM. La URL te la entrega el profesor.
 
 ```bash
-sudo cp /SoftwareArquitectura/frontendHTML/index.html /var/www/html/index.html
+sudo cp SoftwareArquitectura/frontendHTML/index.html /var/www/html/index.html
 ```
 > Copia el archivo `index.html` al directorio raíz de Apache.
 > `/var/www/html/` es la carpeta que Apache sirve por defecto.
-
 > El archivo reemplaza la página de bienvenida de Apache.
+
+**Opción B — copiar desde tu máquina local (con gcloud CLI instalado):**
+```bash
+gcloud compute scp ./frontendHTML/index.html ovnis-html-tunombre:/tmp/index.html --zone=us-central1-a
+```
+> **Ejecutar en tu máquina local, NO dentro de la VM.**
+> `scp` copia el archivo desde tu computador a la carpeta `/tmp/` de la VM de forma segura.
+> No se copia directo a `/var/www/html/` porque esa carpeta requiere permisos de superusuario.
+
+Luego dentro de la VM:
+```bash
+sudo mv /tmp/index.html /var/www/html/index.html
+```
+> Mueve el archivo desde `/tmp/` al directorio de Apache con los permisos correctos.
 
 ---
 
@@ -159,31 +172,56 @@ sudo systemctl reload apache2
 
 ---
 
-## Paso 7 — Verificar en el navegador
+## Paso 7 — Configurar la URL del backend ⚠️ PASO CRÍTICO
+
+Antes de verificar en el navegador, debes apuntar el frontend al Load Balancer de AWS.
+
+Editar el archivo que copiaste a Apache:
+```bash
+sudo nano /var/www/html/index.html
+```
+
+Buscar la línea (cerca del final del archivo, en el bloque `<script>`):
+```javascript
+var API_BASE_URL = 'http://LOAD_BALANCER_DNS_AQUI';
+```
+
+Reemplazar `LOAD_BALANCER_DNS_AQUI` con el DNS real del ALB:
+```javascript
+var API_BASE_URL = 'http://ovnis-alb-1234567890.us-east-1.elb.amazonaws.com';
+```
+
+> El DNS del ALB lo encuentras en: **AWS Console → EC2 → Load Balancers → ovnis-alb → DNS name**
+
+Guardar: `Ctrl+O`, Enter, `Ctrl+X`
+
+---
+
+## Paso 8 — Verificar en el navegador
 
 Abrir en el navegador:
 ```
 http://<EXTERNAL_IP_DE_TU_VM>
 ```
 > Usa la External IP de **tu** VM, no la de un compañero.
-> Deberías ver la tabla de avistamientos de OVNIs con los 5 registros precargados.
-> Puedes crear, editar y eliminar registros.
-> Los cambios son temporales: se pierden al recargar la página porque se guardan en memoria del navegador.
+> Deberías ver la tabla de avistamientos de OVNIs cargados desde la base de datos de AWS.
+> Puedes crear, editar y eliminar registros. Los cambios se guardan en RDS y persisten al recargar.
 
 ---
 
-## Paso 8 — Actualizar el archivo HTML
+## Paso 9 — Actualizar el archivo HTML
 
-Cuando modifiques el `index.html`, solo debes copiarlo de nuevo. No hay compilación ni reinicio:
+Cuando modifiques el `index.html` (por ejemplo para cambiar el DNS del ALB), solo debes copiarlo de nuevo:
 
 ```bash
-sudo cp <ruta>/index.html /var/www/html/index.html
+# Si usaste git clone y modificaste el archivo local:
+sudo cp SoftwareArquitectura/frontendHTML/index.html /var/www/html/index.html
 ```
-> Apache sirve el archivo directamente, por lo que el cambio se refleja de inmediato al recargar el navegador.
+> Apache sirve el archivo directamente. El cambio se refleja de inmediato al recargar el navegador.
 
 ---
 
-## Al terminar la clase — Eliminar tu VM
+## Al terminar — Eliminar tu VM
 
 Para no generar costos en el proyecto del profesor, elimina tu VM al terminar:
 
