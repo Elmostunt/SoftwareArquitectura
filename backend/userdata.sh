@@ -82,13 +82,17 @@ echo "  OK — credenciales guardadas en backend/.env"
 echo ""
 echo "[5/6] Cargando base de datos en RDS..."
 cd /home/ec2-user/SoftwareArquitectura
-mysql -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < database/schema.sql
+
+# schema.sql ya contiene CREATE DATABASE IF NOT EXISTS + USE, no pasar DB_NAME
+mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" < database/schema.sql
 echo "  schema.sql OK"
-mysql -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < database/seed.sql
+
+# seed.sql carga datos en la base ya creada
+mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < database/seed.sql
 echo "  seed.sql OK"
 
 # Verificar que los datos se cargaron
-ROWS=$(mysql -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" -se \
+ROWS=$(mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" -se \
   "SELECT COUNT(*) FROM ${DB_NAME}.avistamientos;" 2>/dev/null)
 echo "  Filas cargadas: ${ROWS}"
 
