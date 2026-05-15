@@ -132,7 +132,7 @@ Lo necesitarás en el script de la EC2.
 ## PARTE 2 — AWS: Instancia EC2 con el backend
 
 > Documentación detallada: `docs/AWS_AMAZONLINUX_ALB.md` — Parte 3 y 4
-> Script de instalación automática: `backend/userdata.sh`
+> Script de instalación automática/manual : `backend/userdata.sh`
 
 ### Paso 2.1 — Lanzar la instancia EC2
 
