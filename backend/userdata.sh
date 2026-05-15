@@ -19,7 +19,7 @@
 # ================================================================
 
 # ── CONFIGURACIÓN — reemplazar estos 3 valores ───────────────
-REPO_URL="https://github.com/USUARIO/REPOSITORIO.git"
+REPO_URL="https://github.com/Elmostunt/SoftwareArquitecura.git"
 DB_HOST="ovnis-db.xxxxxxxxxx.us-east-1.rds.amazonaws.com"
 DB_PASSWORD="TuContraseñaSegura"
 
