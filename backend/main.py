@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 
-import repositorio.SoftwareArquitectura.backend.models as models
-import repositorio.SoftwareArquitectura.backend.schemas as schemas
-from repositorio.SoftwareArquitectura.backend.database import engine, get_db
+import models
+import schemas
+from database import engine, get_db
 
 # Crear tablas automáticamente si no existen
 models.Base.metadata.create_all(bind=engine)

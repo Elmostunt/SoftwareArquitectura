@@ -125,7 +125,8 @@ sleep 3
 systemctl is-active --quiet ovnis-api && echo "  servicio activo" || echo "  ERROR: servicio no arrancó"
 
 # Obtener la IP pública del EC2 (metadata de instancia)
-PUBLIC_IP=$(curl -sf http://169.254.169.254/latest/meta-data/public-ipv4 || echo "IP no disponible")
+TOKEN=$(curl -sf -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" || echo "")
+PUBLIC_IP=$(curl -sf -H "X-aws-ec2-metadata-token: ${TOKEN}" http://169.254.169.254/latest/meta-data/public-ipv4 || echo "IP no disponible")
 
 echo ""
 echo "================================================================"
