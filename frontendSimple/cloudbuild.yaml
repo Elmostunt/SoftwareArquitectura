@@ -3,7 +3,7 @@ steps:
     args:
       - 'build'
       - '--build-arg'
-      - 'VITE_API_URL=$_VITE_API_URL'
+      - 'API_PROXY_URL=$_API_PROXY_URL'
       - '--tag'
       - '$_IMAGE'
       - '.'
@@ -12,5 +12,5 @@ images:
   - '$_IMAGE'
 
 substitutions:
-  _VITE_API_URL: 'http://LOAD_BALANCER_DNS_AQUI'
+  _API_PROXY_URL: 'http://LOAD_BALANCER_DNS_AQUI'
   _IMAGE: 'us-central1-docker.pkg.dev/PROJECT_ID/ovnis-repo/ovnis-frontend'

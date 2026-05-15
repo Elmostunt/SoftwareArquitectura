@@ -3,15 +3,13 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copia solo los archivos de dependencias primero (optimiza caché de Docker)
 COPY package.json ./
 RUN npm install
 
-# Copia el resto del código fuente
 COPY . .
 
-# Variable de entorno para la URL del Load Balancer (se pasa como build arg)
-ARG VITE_API_URL
+# VITE_API_URL siempre es /api — nginx hace el proxy al ALB
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build
@@ -19,13 +17,13 @@ RUN npm run build
 # ── Etapa 2: Servir los archivos estáticos con Nginx ─────────
 FROM nginx:alpine
 
-# Copia el resultado del build al directorio de Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copia la configuración personalizada de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Cloud Run enruta el tráfico al puerto 8080
+# Reemplaza el placeholder con la URL real del ALB en nginx.conf
+ARG API_PROXY_URL=http://localhost:8000
+RUN sed -i "s|PLACEHOLDER_API_URL|${API_PROXY_URL}|g" /etc/nginx/conf.d/default.conf
+
 EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]

@@ -92,11 +92,12 @@ export PROJECT_ID=$(gcloud config get-value project)
 
 ```bash
 gcloud builds submit \
-  --tag us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend \
-  --substitutions=_VITE_API_URL="$ALB_DNS" \
+  --config cloudbuild.yaml \
+  --substitutions=_VITE_API_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend" \
   .
 ```
-> `--substitutions=_VITE_API_URL` pasa la URL del ALB al proceso de build dentro de Cloud Build.
+> `--config cloudbuild.yaml` indica a Cloud Build que use el archivo de configuración incluido en el proyecto.
+> `_VITE_API_URL` pasa la URL del ALB y `_IMAGE` define el nombre completo de la imagen en Artifact Registry.
 > El `Dockerfile` usa `ARG VITE_API_URL` para que Vite la incruste en el JavaScript durante `npm run build`.
 > Este proceso tarda entre 2 y 4 minutos.
 
@@ -152,8 +153,8 @@ Si modificas algo en el código fuente, debes reconstruir la imagen y redesplega
 
 ```bash
 gcloud builds submit \
-  --tag us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend \
-  --substitutions=_VITE_API_URL="$ALB_DNS" \
+  --config cloudbuild.yaml \
+  --substitutions=_VITE_API_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend" \
   .
 ```
 
