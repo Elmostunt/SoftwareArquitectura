@@ -19,9 +19,9 @@
 # ================================================================
 
 # ── CONFIGURACIÓN — reemplazar estos 3 valores ───────────────
-REPO_URL="https://github.com/USUARIO/REPOSITORIO.git"
-DB_HOST="ovnis-db.xxxxxxxxxx.us-east-1.rds.amazonaws.com"
-DB_PASSWORD="TuContraseñaSegura"
+REPO_URL="https://github.com/Elmostunt/SoftwareArquitectura.git"
+DB_HOST="ovnis-db.c0jgqmwe6uhd.us-east-1.rds.amazonaws.com"
+DB_PASSWORD="Inacap2028"
 
 # No modificar si usaste los nombres sugeridos en la guía
 DB_PORT="3306"
