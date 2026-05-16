@@ -93,7 +93,7 @@ export PROJECT_ID=$(gcloud config get-value project)
 ```bash
 gcloud builds submit \
   --config cloudbuild.yaml \
-  --substitutions=_VITE_API_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend" \
+  --substitutions=_API_PROXY_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend" \
   .
 ```
 > `--config cloudbuild.yaml` indica a Cloud Build que use el archivo de configuración incluido en el proyecto.
