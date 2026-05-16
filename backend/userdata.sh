@@ -38,7 +38,7 @@ echo ""
 echo "[2/6] Clonando repositorio..."
 
 cd /home/ec2-user
-sudo git clone "$REPO_URL" SoftwareArquitectura
+sudo git clone "$REPO_URL"
 sudo chown -R ec2-user:ec2-user SoftwareArquitectura
 
 echo "  OK — clonado en /home/ec2-user/SoftwareArquitectura"
