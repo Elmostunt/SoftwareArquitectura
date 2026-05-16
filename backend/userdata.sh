@@ -5,9 +5,9 @@
 # ================================================================
 
 # ── CONFIGURACIÓN — reemplazar estos 3 valores ───────────────
-REPO_URL="https://github.com/Elmostunt/SoftwareArquitecura.git"
-DB_HOST="ovnis-db.xxxxxxxxxx.us-east-1.rds.amazonaws.com"
-DB_PASSWORD="TuContraseñaSegura"
+REPO_URL="https://github.com/Elmostunt/SoftwareArquitectura.git"
+DB_HOST="database-1.c0jgqmwe6uhd.us-east-1.rds.amazonaws.com"
+DB_PASSWORD="Inacap2028"
 
 DB_PORT="3306"
 DB_NAME="ovnis_db"
@@ -52,7 +52,7 @@ cd /home/ec2-user/SoftwareArquitectura/backend
 python3 -m venv venv
 source venv/bin/activate
 
-sudo pip install --quiet -r requirements.txt
+pip install --quiet -r requirements.txt
 
 echo "  OK — entorno virtual en backend/venv/"
 
@@ -79,13 +79,13 @@ echo "[5/6] Cargando base de datos en RDS..."
 
 cd /home/ec2-user/SoftwareArquitectura
 
-sudo mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" < database/schema.sql
+mysql -h "${DB_HOST}" -P "${DB_PORT}" --protocol=TCP -u "${DB_USER}" -p"${DB_PASSWORD}" < database/schema.sql
 echo "  schema.sql OK"
 
-sudo mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < database/seed.sql
+mysql -h "${DB_HOST}" -P "${DB_PORT}" --protocol=TCP -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < database/seed.sql
 echo "  seed.sql OK"
 
-ROWS=$(sudo mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" -se \
+ROWS=$(mysql -h "${DB_HOST}" -P "${DB_PORT}" --protocol=TCP -u "${DB_USER}" -p"${DB_PASSWORD}" -se \
   "SELECT COUNT(*) FROM ${DB_NAME}.avistamientos;" 2>/dev/null)
 
 echo "  Filas cargadas: ${ROWS}"
