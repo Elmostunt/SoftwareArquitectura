@@ -6,7 +6,7 @@
 
 # ── CONFIGURACIÓN — reemplazar estos 3 valores ───────────────
 REPO_URL="https://github.com/Elmostunt/SoftwareArquitectura.git"
-DB_HOST="database-1.c0jgqmwe6uhd.us-east-1.rds.amazonaws.com"
+DB_HOST="ovnis-db2.c0jgqmwe6uhd.us-east-1.rds.amazonaws.com"
 DB_PASSWORD="Inacap2028"
 
 DB_PORT="3306"
