@@ -101,14 +101,14 @@ export ALB_DNS="http://<DNS-del-Load-Balancer>"
 ```bash
 gcloud builds submit \
   --config cloudbuild.yaml \
-  --substitutions=_API_PROXY_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo-elmostunt/ovnis-frontend-profe" \
+  --substitutions=_API_PROXY_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend" \
   .
 ```
 
 **Deploy:**
 ```bash
-gcloud run deploy ovnis-frontend-profe \
-  --image us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo-elmostunt/ovnis-frontend-profe \
+gcloud run deploy ovnis-frontend \
+  --image us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated

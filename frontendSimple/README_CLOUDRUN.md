@@ -69,7 +69,8 @@ gcloud artifacts repositories create ovnis-repo \
 ## Paso 4 — Configurar la URL del backend ⚠️ PASO CRÍTICO
 
 La URL del Load Balancer de AWS debe pasarse en el momento de construir la imagen.
-Usamos un **build argument** de Docker para que Vite la incruste en el JavaScript.
+Usamos un **build argument** de Docker para que nginx la use como destino del proxy inverso.
+El frontend siempre llama a `/api/*` (URL relativa); nginx recibe esa petición y la reenvía al ALB de AWS.
 
 Guardar el DNS del ALB en una variable:
 ```bash
@@ -97,13 +98,13 @@ gcloud builds submit \
   .
 ```
 > `--config cloudbuild.yaml` indica a Cloud Build que use el archivo de configuración incluido en el proyecto.
-> `_VITE_API_URL` pasa la URL del ALB y `_IMAGE` define el nombre completo de la imagen en Artifact Registry.
-> El `Dockerfile` usa `ARG VITE_API_URL` para que Vite la incruste en el JavaScript durante `npm run build`.
+> `_API_PROXY_URL` pasa la URL del ALB a nginx (para que haga el proxy inverso) y `_IMAGE` define el nombre completo de la imagen en Artifact Registry.
+> El `Dockerfile` fija `VITE_API_URL=/api` para que el frontend siempre llame a rutas relativas; nginx resuelve a dónde van.
 > Este proceso tarda entre 2 y 4 minutos.
 
 > **Alternativa con Docker local** (si tienes Docker instalado en tu máquina):
 > ```bash
-> docker build --build-arg _API_PROXY_URL="$ALB_DNS" -t ovnis-frontend .
+> docker build --build-arg API_PROXY_URL="$ALB_DNS" -t ovnis-frontend .
 > ```
 
 ---
@@ -154,7 +155,7 @@ Si modificas algo en el código fuente, debes reconstruir la imagen y redesplega
 ```bash
 gcloud builds submit \
   --config cloudbuild.yaml \
-  --substitutions=_VITE_API_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend" \
+  --substitutions=_API_PROXY_URL="$ALB_DNS",_IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/ovnis-repo/ovnis-frontend" \
   .
 ```
 

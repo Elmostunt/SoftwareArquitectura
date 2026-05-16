@@ -83,7 +83,7 @@ export default function App() {
           <div className="state-msg" style={{ color: '#c53030' }}>
             Error al conectar con la API: {error}
             <br />
-            <small>Verifica que VITE_API_URL apunta al DNS del Load Balancer de AWS.</small>
+            <small>Verifica que el backend en AWS está activo y que el proxy nginx está configurado correctamente.</small>
           </div>
         )}
 
