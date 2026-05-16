@@ -103,7 +103,7 @@ gcloud builds submit \
 
 > **Alternativa con Docker local** (si tienes Docker instalado en tu máquina):
 > ```bash
-> docker build --build-arg VITE_API_URL="$ALB_DNS" -t ovnis-frontend .
+> docker build --build-arg _API_PROXY_URL="$ALB_DNS" -t ovnis-frontend .
 > ```
 
 ---
